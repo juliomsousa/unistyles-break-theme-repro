@@ -33,8 +33,8 @@ cd UnistylesFreezeRepro
 #    - android/gradle.properties -> newArchEnabled=true
 #    - ios/Podfile -> ENV['RCT_NEW_ARCH_ENABLED'] ||= '1' (or just default true)
 
-# 3. Install navigation + screens + gesture/safe-area deps
-pnpm add @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs \
+# 3. Install navigation + screens + gesture/safe-area deps (bottom-tabs is optional, see spec section 3)
+pnpm add @react-navigation/native @react-navigation/native-stack \
   react-native-screens react-native-safe-area-context react-native-gesture-handler
 
 # 4. Install Nitro Modules + Unistyles, pinned to the buggy version first
@@ -124,7 +124,8 @@ cd ios && bundle exec pod install && cd ..
 ## 1. Tech stack (minimal, public-only)
 
 - `react-native` (match a recent version family, e.g. 0.87.x) + New Architecture/Fabric
-- `@react-navigation/native` + `native-stack` + `bottom-tabs`
+- `@react-navigation/native` + `native-stack` (`bottom-tabs` is optional, see section 3 — tab
+  switching is not the trigger)
 - `react-native-screens` (latest), `enableFreeze(true)`, `enableScreens(true)`
 - `react-native-unistyles` — pin to `3.3.0` on `main`, no other native deps at all (no Firebase,
   no chat, nothing app-specific)
@@ -140,24 +141,38 @@ unistyles-freeze-repro/
 ├── src/
 │   ├── SharedText.tsx       # the ONE shared dynamic-function style (see below)
 │   ├── HomeScreen.tsx       # renders SharedText with color=green, alignCenter=false
-│   ├── StepScreen.tsx       # a generic "push another screen" screen (reused x3-4 deep)
-│   ├── ButtonLikeScreen.tsx # renders SharedText with color=white, alignCenter=true
-│   └── AutoRunner.tsx       # the automated navigation driver
+│   ├── StepScreen.tsx       # a generic "push another screen" screen (reused, Step1/Step2)
+│   ├── ButtonLikeScreen.tsx # Step3 - renders SharedText with color=white, alignCenter=true
+│   └── AutoRunner.tsx       # the automated push-to-Step3-then-popToTop driver
 ├── README.md                # repro steps, environment, recording, links to related issues
 └── package.json
 ```
 
-## 3. Navigation setup
+## 3. Navigation setup — the actual trigger is stack depth, not tabs
 
-Mirror a typical production setup:
+**Switching bottom tabs alone does not trigger this bug.** `detachInactiveScreens` (used on
+bottom tabs) only detaches the *native view* of an inactive tab — a separate, unrelated
+optimization. The bug needs `enableFreeze()`'s `freezeOnBlur` behavior, which only kicks in on a
+**native-stack** screen once it is two or more screens below the currently focused one. Tab
+switching by itself never puts a screen in that state.
 
-- Bottom tabs (`Home`, `Other`) with `detachInactiveScreens` on the tab navigator.
-- A native stack under the `Home` tab: `Home -> Step1 -> Step2 -> Step3`, pushed 2-3 screens deep
-  so `Home` actually freezes (native-stack freezes everything except the focused screen and the
-  one directly below it).
+Minimal, reliable trigger (matches jpudysz/react-native-unistyles#1252's own repro steps, which
+use no tabs at all):
+
+- A single `createNativeStackNavigator()` with **4 screens**: `Home -> Step1 -> Step2 -> Step3`.
+  Don't stop at 2-3 — go to at least 4 so `Home` is unambiguously 2+ levels below the focused
+  screen and definitely frozen, not just borderline.
 - `enableScreens(true)` + `enableFreeze(true)` at the top of `App.tsx`, nothing else — no scoped
   themes, no runtime theme switching, to isolate the pure-navigation trigger (as opposed to the
   theme-change trigger in #1179/#1191).
+- Push all the way to `Step3` (this freezes `Home`), then pop all the way back to `Home` in one
+  shot with `navigation.popToTop()`, which unfreezes it in a single event — that's the moment the
+  corruption appears.
+
+**Bottom tabs are optional.** If you want to mirror a production app's structure more closely,
+wrap the stack above inside one tab of a `createBottomTabNavigator()`, but the repro must not
+depend on tab switching — only on the stack push/pop depth. If you do add tabs, leave
+`detachInactiveScreens` off here so it isn't a confounding variable.
 
 ## 4. The critical component — shared dynamic function
 
@@ -187,9 +202,15 @@ export const SharedText = ({color, alignCenter, children}: Props) => (
 ## 5. Automated driver (no manual tapping)
 
 A single button/effect that runs N cycles of:
-`push Step1 -> push Step2 -> push Step3 (renders ButtonLikeScreen) -> pop to Home`,
-with a short delay between steps, looped automatically. Log each cycle number to the console/on
-screen so a screen recording clearly shows "cycle 3: corrupted."
+`navigation.push('Step1') -> push('Step2') -> push('Step3')` (renders `ButtonLikeScreen`) ->
+**wait ~300-500ms** (give react-native-screens time to actually freeze `Home` before popping —
+popping too fast can skip the freeze entirely) -> `navigation.popToTop()` (a single unfreeze
+event for `Home`, not a sequence of individual pops).
+
+Loop this automatically with a short delay between cycles, and log the cycle number to the
+console/on-screen. Per #1252's own findings, the corruption/cost compounds after the first cycle,
+so plan for at least 5-10 automatic cycles, not just one — the first cycle alone may not show
+anything.
 
 ## 6. Make the corruption detectable, not just visual
 

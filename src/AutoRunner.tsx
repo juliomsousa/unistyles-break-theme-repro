@@ -3,12 +3,19 @@ import {StyleSheet, Text, View} from 'react-native';
 import {StackActions} from '@react-navigation/native';
 import {navigationRef} from './navigationRef';
 
-const CYCLE_DELAY_MS = 700;
+// time between individual pushes, so react-navigation doesn't drop overlapping transitions
+const TRANSITION_DELAY_MS = 400;
+// extra wait once Step3 is focused, so react-native-screens actually freezes Home before we pop
+// (popping too fast can skip the freeze entirely - see spec section 5)
+const FREEZE_SETTLE_DELAY_MS = 400;
+// pause after popping back to Home, so a human can actually watch each cycle's result
+const CYCLE_COOLDOWN_MS = 1500;
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-// drives push Step1 -> push Step2 -> push Step3 -> pop to Home, looped, with no manual tapping.
-// rendered outside the Home stack's Screens so it keeps running while those screens are frozen.
+// drives push Step1 -> push Step2 -> push Step3 -> (wait for freeze) -> pop to Home in one shot,
+// looped, with no manual tapping. Rendered outside the stack's Screens so it keeps running while
+// they're frozen.
 export const AutoRunner = () => {
   const [cycle, setCycle] = useState(0);
   const [status, setStatus] = useState('starting');
@@ -25,24 +32,28 @@ export const AutoRunner = () => {
 
         setStatus(`cycle ${n}: push Step1`);
         navigationRef.current?.dispatch(StackActions.push('Step1'));
-        await delay(CYCLE_DELAY_MS);
+        await delay(TRANSITION_DELAY_MS);
         if (stoppedRef.current) break;
 
         setStatus(`cycle ${n}: push Step2`);
         navigationRef.current?.dispatch(StackActions.push('Step2'));
-        await delay(CYCLE_DELAY_MS);
+        await delay(TRANSITION_DELAY_MS);
         if (stoppedRef.current) break;
 
         setStatus(`cycle ${n}: push Step3 (ButtonLikeScreen)`);
         navigationRef.current?.dispatch(StackActions.push('Step3'));
-        await delay(CYCLE_DELAY_MS);
+        await delay(TRANSITION_DELAY_MS);
         if (stoppedRef.current) break;
 
-        setStatus(`cycle ${n}: pop to Home`);
-        navigationRef.current?.dispatch(StackActions.popToTop());
-        await delay(CYCLE_DELAY_MS);
+        setStatus(`cycle ${n}: waiting for Home to freeze`);
+        await delay(FREEZE_SETTLE_DELAY_MS);
+        if (stoppedRef.current) break;
 
+        setStatus(`cycle ${n}: pop to Home (single event)`);
+        navigationRef.current?.dispatch(StackActions.popToTop());
         console.log(`[AutoRunner] completed cycle ${n}`);
+
+        await delay(CYCLE_COOLDOWN_MS);
       }
     };
 
@@ -73,5 +84,9 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 12,
     color: '#666666',
+    backgroundColor: '#ffffffcc',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
 });

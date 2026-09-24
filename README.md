@@ -6,17 +6,19 @@ triggered by `react-native-screens` freeze/unfreeze during navigation. See
 
 ## What this app does
 
-- Bottom tabs (`Home`, `Other`) with `detachInactiveScreens` on the tab navigator.
-- A native stack under `Home`: `Home -> Step1 -> Step2 -> Step3`, so `Home` gets frozen once the
-  stack is 2+ screens deep (native-stack only keeps the focused screen + the one directly below
-  it mounted/unfrozen).
+- A single native stack, no tabs: `Home -> Step1 -> Step2 -> Step3`. Tab switching is **not**
+  the trigger for this bug (`detachInactiveScreens` only detaches an inactive tab's native view,
+  a separate optimization) — the actual trigger is `enableFreeze()`'s `freezeOnBlur` behavior,
+  which only kicks in once a native-stack screen is 2+ screens below the focused one. Going to
+  `Step3` unambiguously freezes `Home`.
 - One shared dynamic Unistyles style function (`src/SharedText.tsx`) called with different
   arguments by `HomeScreen` (`color="green"`) and `ButtonLikeScreen` (`color="white"`,
   `alignCenter`), pushed deep in the stack as `Step3`.
-- `src/AutoRunner.tsx` drives `push Step1 -> push Step2 -> push Step3 -> pop to Home` in an
-  infinite loop with no manual tapping, logging each cycle to the console and to an on-screen
-  status line. It lives outside the Home stack's `Screen`s so it keeps running while they're
-  frozen.
+- `src/AutoRunner.tsx` drives `push Step1 -> push Step2 -> push Step3 -> wait for freeze ->
+  pop to Home (single popToTop event)` in an infinite loop with no manual tapping, logging each
+  cycle/phase to the console and to an on-screen status line. It lives outside the stack's
+  `Screen`s so it keeps running while they're frozen. Manual "push"/"back to Home" buttons are
+  also still on each screen if you want to drive it by hand instead.
 - If the bug is present, after enough freeze/unfreeze cycles `HomeScreen`'s text
   (`testID="home-text"`) renders white + centered instead of green + left-aligned — visually
   obvious and easy to screen-record, and assertable via `testID`.
@@ -33,7 +35,6 @@ triggered by `react-native-screens` freeze/unfreeze during navigation. See
 | `react-native-gesture-handler`    | 3.3.0                                           |
 | `@react-navigation/native`        | 7.4.1                                           |
 | `@react-navigation/native-stack`  | 7.19.2                                          |
-| `@react-navigation/bottom-tabs`   | 7.19.2                                          |
 | `react-native-safe-area-context`  | 5.10.0                                          |
 | Architecture                      | New Architecture / Fabric (default in RN 0.87)  |
 | Platform tested                   | iOS Simulator (iPhone 17 Pro, iOS 26.2), Release build recommended |
@@ -47,9 +48,13 @@ pnpm ios:dev     # or: npx react-native run-ios --simulator "iPhone 17 Pro"
 pnpm android
 ```
 
-The app starts cycling automatically on launch — no interaction needed. Watch the `Home` tab's
-text and the on-screen "cycle N" status line at the bottom of the screen; a screen recording over
-~30s to a minute (dozens of cycles) is enough to show a corrupted cycle if/when it happens.
+The app starts cycling automatically on launch — no interaction needed. Each cycle pushes through
+`Step1 -> Step2 -> Step3`, waits ~400ms for `Home` to actually freeze, then pops back to `Home` in
+a single event, with a ~1.5s cooldown before the next cycle so it's easy to watch. Per
+[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252), corruption compounds
+across cycles rather than showing up on the first one, so watch for at least 5-10 cycles. Watch
+`Home`'s text and the on-screen "cycle N: ..." status line at the bottom of the screen; a screen
+recording over ~30s to a minute is enough to show a corrupted cycle if/when it happens.
 
 ## Bisecting to 3.2.5
 

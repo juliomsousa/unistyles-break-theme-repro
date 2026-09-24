@@ -4,8 +4,3 @@ export type HomeStackParamList = {
   Step2: undefined;
   Step3: undefined;
 };
-
-export type RootTabParamList = {
-  HomeTab: undefined;
-  Other: undefined;
-};
