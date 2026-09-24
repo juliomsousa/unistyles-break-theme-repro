@@ -1,97 +1,80 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# unistyles-break-theme-repro
 
-# Getting Started
+Minimal, self-driving repro for a `react-native-unistyles@3.3.0` style cross-contamination bug
+triggered by `react-native-screens` freeze/unfreeze during navigation. See
+[UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md) for the full spec this app implements.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## What this app does
 
-## Step 1: Start Metro
+- Bottom tabs (`Home`, `Other`) with `detachInactiveScreens` on the tab navigator.
+- A native stack under `Home`: `Home -> Step1 -> Step2 -> Step3`, so `Home` gets frozen once the
+  stack is 2+ screens deep (native-stack only keeps the focused screen + the one directly below
+  it mounted/unfrozen).
+- One shared dynamic Unistyles style function (`src/SharedText.tsx`) called with different
+  arguments by `HomeScreen` (`color="green"`) and `ButtonLikeScreen` (`color="white"`,
+  `alignCenter`), pushed deep in the stack as `Step3`.
+- `src/AutoRunner.tsx` drives `push Step1 -> push Step2 -> push Step3 -> pop to Home` in an
+  infinite loop with no manual tapping, logging each cycle to the console and to an on-screen
+  status line. It lives outside the Home stack's `Screen`s so it keeps running while they're
+  frozen.
+- If the bug is present, after enough freeze/unfreeze cycles `HomeScreen`'s text
+  (`testID="home-text"`) renders white + centered instead of green + left-aligned — visually
+  obvious and easy to screen-record, and assertable via `testID`.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Environment
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+| Package                          | Version                                        |
+| --------------------------------- | ----------------------------------------------- |
+| `react-native`                    | 0.87.1                                          |
+| `react`                            | 19.2.3                                          |
+| `react-native-unistyles`          | 3.3.0 (bug) / 3.2.5 (no repro)                  |
+| `react-native-nitro-modules`      | 0.37.1                                          |
+| `react-native-screens`            | 4.28.0                                          |
+| `react-native-gesture-handler`    | 3.3.0                                           |
+| `@react-navigation/native`        | 7.4.1                                           |
+| `@react-navigation/native-stack`  | 7.19.2                                          |
+| `@react-navigation/bottom-tabs`   | 7.19.2                                          |
+| `react-native-safe-area-context`  | 5.10.0                                          |
+| Architecture                      | New Architecture / Fabric (default in RN 0.87)  |
+| Platform tested                   | iOS Simulator (iPhone 17 Pro, iOS 26.2), Release build recommended |
 
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
+## Running it
 
 ```sh
-bundle exec pod install
+pnpm install
+cd ios && bundle install && bundle exec pod install && cd ..
+pnpm ios:dev     # or: npx react-native run-ios --simulator "iPhone 17 Pro"
+pnpm android
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+The app starts cycling automatically on launch — no interaction needed. Watch the `Home` tab's
+text and the on-screen "cycle N" status line at the bottom of the screen; a screen recording over
+~30s to a minute (dozens of cycles) is enough to show a corrupted cycle if/when it happens.
+
+## Bisecting to 3.2.5
+
+The bisection is the most valuable part of this repro — it isolates the regression to
+[commit `4d46223`](https://github.com/jpudysz/react-native-unistyles/commit/4d4622379e10e82e7a744e5d3b66c2a0456826b8)
+("feat: add support for react-navigation inactive behaviour"), shipped in `3.3.0`.
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+pnpm add react-native-unistyles@3.2.5
+cd ios && bundle exec pod install && cd ..
+pnpm ios:dev
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+Rebuild and let it cycle the same way: on `3.2.5` the `Home` text should stay green + left-aligned
+indefinitely, with no cross-contamination.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Related upstream reports
 
-## Step 3: Modify your app
+- [#1217](https://github.com/jpudysz/react-native-unistyles/issues/1217)
+- [#1234](https://github.com/jpudysz/react-native-unistyles/pull/1234)
+- [#1191](https://github.com/jpudysz/react-native-unistyles/pull/1191) (closed, unmerged for lack
+  of a reproduction)
+- [#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
 
-Now that you have successfully run the app, let's make changes!
+Both #1234's and #1191's patches were tested against `3.3.0` and neither fixed this particular
+variant (style cross-contamination between unrelated components sharing a dynamic style function,
+rather than a crash) — see [UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md) for details.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
