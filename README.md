@@ -65,8 +65,6 @@ left-aligned.
 | ------------------------------------------------ | ---------------------------------------------------- |
 | ![Bug on 3.3.0](./media/bug-3.3.0.gif)            | ![Fixed on 3.2.5](./media/fixed-3.2.5.gif)            |
 
-Full-quality `.mp4` recordings (with audio) are in [media/](./media/) if you want the originals.
-
 See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
 
 To confirm the bisection, run each branch's build:
