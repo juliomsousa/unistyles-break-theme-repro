@@ -61,13 +61,9 @@ left-aligned.
 
 ## Video demonstration
 
-### `3.3.0` (bug present)
-
-<video src="./media/bug-3.3.0.mp4" controls width="360"></video>
-
-### `3.2.5` (no repro)
-
-<video src="./media/fixed-3.2.5.mp4" controls width="360"></video>
+| `3.3.0` (bug present)                                  | `3.2.5` (no repro)                                       |
+| ------------------------------------------------------- | ----------------------------------------------------------- |
+| <video src="./media/bug-3.3.0.mp4" controls width="300"></video> | <video src="./media/fixed-3.2.5.mp4" controls width="300"></video> |
 
 See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
 
