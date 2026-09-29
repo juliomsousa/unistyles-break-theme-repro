@@ -291,11 +291,13 @@ repro; automation-grade assertions are a nice-to-have.
 
 ## 7. Version bisection built into the repro
 
-Make the Unistyles version trivially swappable:
+Implemented as two branches plus two `npm` scripts:
 
-- Two branches: `main` (3.3.0, broken) and `fixed-3.2.5` (working), or
-- A README note: "run `npm install react-native-unistyles@3.2.5 && pod install`, rebuild, cycles no
-  longer corrupt."
+- `main` (3.3.0, broken) and `fixed-3.2.5` (identical except `react-native-unistyles` pinned to
+  `3.2.5`, and `package-lock.json` refreshed to match).
+- `npm run demo:main` (`git checkout main && npm run build:ios`) and
+  `npm run demo:fixed` (`git checkout fixed-3.2.5 && npm run build:ios`) so switching versions and
+  rebuilding is a single command, no manual `pod install`/version juggling required.
 
 This bisection is the single most valuable thing to hand the maintainer — concrete, falsifiable,
 and points straight at commit
