@@ -61,9 +61,11 @@ left-aligned.
 
 ## Video demonstration
 
-| `3.3.0` (bug present)                                  | `3.2.5` (no repro)                                       |
-| ------------------------------------------------------- | ----------------------------------------------------------- |
-| <video src="https://raw.githubusercontent.com/juliomsousa/unistyles-break-theme-repro/main/media/bug-3.3.0.mp4" width="300" controls /> | <video src="https://raw.githubusercontent.com/juliomsousa/unistyles-break-theme-repro/main/media/fixed-3.2.5.mp4" width="300" controls /> |
+| `3.3.0` (bug present)                          | `3.2.5` (no repro)                                |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| ![Bug on 3.3.0](./media/bug-3.3.0.gif)            | ![Fixed on 3.2.5](./media/fixed-3.2.5.gif)            |
+
+Full-quality `.mp4` recordings (with audio) are in [media/](./media/) if you want the originals.
 
 See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
 
