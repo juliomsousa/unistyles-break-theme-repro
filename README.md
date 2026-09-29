@@ -67,13 +67,16 @@ left-aligned.
 
 See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
 
-To confirm the bisection, swap the unistyles version and rebuild:
+To confirm the bisection, run each branch's build:
 
 ```sh
-npm install react-native-unistyles@3.2.5
-cd ios && bundle exec pod install && cd ..
-npm run ios:dev
+npm run demo:main   # checks out main (unistyles 3.3.0, bug present) and builds/runs iOS
+npm run demo:fixed  # checks out fixed-3.2.5 (unistyles 3.2.5, no repro) and builds/runs iOS
 ```
+
+`fixed-3.2.5` is a branch identical to `main` except `react-native-unistyles` is pinned to
+`3.2.5`. Both scripts run `git checkout` then `npm run build:ios`, so make sure you have no
+uncommitted changes before running them.
 
 On `3.2.5` the same cycles should never show cross-contamination — this isolates the regression
 to [commit `4d46223`](https://github.com/jpudysz/react-native-unistyles/commit/4d4622379e10e82e7a744e5d3b66c2a0456826b8)
