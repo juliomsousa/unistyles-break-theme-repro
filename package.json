@@ -7,6 +7,8 @@
     "ios:dev": "react-native run-ios",
     "build:ios": "npm install && cd ios && bundle install && bundle exec pod install && cd .. && npm run ios:dev",
     "build:android": "npm install && npm run android",
+    "demo:main": "git checkout main && npm run build:ios",
+    "demo:fixed": "git checkout fixed-3.2.5 && npm run build:ios",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"
