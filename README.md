@@ -63,7 +63,7 @@ left-aligned.
 
 | `3.3.0` (bug present)                                  | `3.2.5` (no repro)                                       |
 | ------------------------------------------------------- | ----------------------------------------------------------- |
-| <video src="./media/bug-3.3.0.mp4" controls width="300"></video> | <video src="./media/fixed-3.2.5.mp4" controls width="300"></video> |
+| <video src="https://raw.githubusercontent.com/juliomsousa/unistyles-break-theme-repro/main/media/bug-3.3.0.mp4" width="300" controls /> | <video src="https://raw.githubusercontent.com/juliomsousa/unistyles-break-theme-repro/main/media/fixed-3.2.5.mp4" width="300" controls /> |
 
 See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
 
