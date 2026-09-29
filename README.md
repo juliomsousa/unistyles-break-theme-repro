@@ -1,75 +1,83 @@
 # unistyles-break-theme-repro
 
-Minimal, self-driving repro for a `react-native-unistyles@3.3.0` style cross-contamination bug
-triggered by `react-native-screens` freeze/unfreeze during navigation. See
-[UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md) for the full spec this app implements.
+Minimal repro for a `react-native-unistyles@3.3.0` bug where styles from one component leak onto
+another after `react-native-screens` freezes/unfreezes a screen during navigation.
 
-## What this app does
+## The issue
 
-- A single native stack, no tabs: `Home -> Step1 -> Step2 -> Step3`. Tab switching is **not**
-  the trigger for this bug (`detachInactiveScreens` only detaches an inactive tab's native view,
-  a separate optimization) — the actual trigger is `enableFreeze()`'s `freezeOnBlur` behavior,
-  which only kicks in once a native-stack screen is 2+ screens below the focused one. Going to
-  `Step3` unambiguously freezes `Home`.
-- One shared dynamic Unistyles style function (`src/SharedText.tsx`) called with different
-  arguments by `HomeScreen` (`color="green"`) and `ButtonLikeScreen` (`color="white"`,
-  `alignCenter`), pushed deep in the stack as `Step3`.
-- `src/AutoRunner.tsx` drives `push Step1 -> push Step2 -> push Step3 -> wait for freeze ->
-  pop to Home (single popToTop event)` in an infinite loop with no manual tapping, logging each
-  cycle/phase to the console and to an on-screen status line. It lives outside the stack's
-  `Screen`s so it keeps running while they're frozen. Manual "push"/"back to Home" buttons are
-  also still on each screen if you want to drive it by hand instead.
-- If the bug is present, after enough freeze/unfreeze cycles `HomeScreen`'s text
-  (`testID="home-text"`) renders white + centered instead of green + left-aligned — visually
-  obvious and easy to screen-record, and assertable via `testID`.
+`react-native-unistyles` caches the last arguments passed to a shared dynamic style function
+(one function reused by multiple components with different args). When `react-native-screens`
+freezes a screen 2+ levels deep in a native-stack and later unfreezes it, that cached style gets
+recomputed with the wrong (most-recently-used) arguments instead of its own — so an unrelated
+screen's colors/alignment "leak" onto it.
+
+This app has a single native stack (`Home -> Step1 -> Step2 -> Step3`) and one shared style
+function (`src/SharedText.tsx`). `Home`, `Step1`, and `Step2` all use it with the same args
+(green, left-aligned); `Step3` uses different args (white, centered). If the bug is present,
+after enough freeze/unfreeze cycles `Home`, `Step1`, or `Step2` renders white + centered instead
+of green + left-aligned.
+
+See [UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md) for the full investigation and design
+rationale.
 
 ## Environment
 
-| Package                          | Version                                        |
-| --------------------------------- | ----------------------------------------------- |
-| `react-native`                    | 0.87.1                                          |
-| `react`                            | 19.2.3                                          |
-| `react-native-unistyles`          | 3.3.0 (bug) / 3.2.5 (no repro)                  |
-| `react-native-nitro-modules`      | 0.37.1                                          |
-| `react-native-screens`            | 4.28.0                                          |
-| `react-native-gesture-handler`    | 3.3.0                                           |
-| `@react-navigation/native`        | 7.4.1                                           |
-| `@react-navigation/native-stack`  | 7.19.2                                          |
-| `react-native-safe-area-context`  | 5.10.0                                          |
-| Architecture                      | New Architecture / Fabric (default in RN 0.87)  |
-| Platform tested                   | iOS Simulator (iPhone 17 Pro, iOS 26.2), Release build recommended |
+| Package                           | Version                                        |
+| ---------------------------------- | ----------------------------------------------- |
+| `react-native`                     | 0.87.1                                          |
+| `react`                             | 19.2.3                                          |
+| `react-native-unistyles`           | 3.3.0 (bug) / 3.2.5 (no repro)                  |
+| `react-native-nitro-modules`       | 0.37.1                                          |
+| `react-native-screens`             | 4.28.0                                          |
+| `@react-navigation/native-stack`   | 7.19.2                                          |
+| Architecture                       | New Architecture / Fabric (default in RN 0.87)  |
+| Platform tested                    | iOS Simulator (iPhone 17 Pro, iOS 26.2), Release build recommended |
 
-## Running it
+## Installation
 
 ```sh
-pnpm install
-cd ios && bundle install && bundle exec pod install && cd ..
-pnpm ios:dev     # or: npx react-native run-ios --simulator "iPhone 17 Pro"
-pnpm android
+npm run build:ios      # npm install + bundle install + pod install + run iOS app
+npm run build:android  # npm install + run Android app
 ```
 
-The app starts cycling automatically on launch — no interaction needed. Each cycle pushes through
-`Step1 -> Step2 -> Step3`, waits ~400ms for `Home` to actually freeze, then pops back to `Home` in
-a single event, with a ~1.5s cooldown before the next cycle so it's easy to watch. Per
-[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252), corruption compounds
-across cycles rather than showing up on the first one, so watch for at least 5-10 cycles. Watch
-`Home`'s text and the on-screen "cycle N: ..." status line at the bottom of the screen; a screen
-recording over ~30s to a minute is enough to show a corrupted cycle if/when it happens.
+`build:ios` runs `bundle install`/`bundle exec pod install` rather than a bare `pod install` so
+CocoaPods resolves to the exact version pinned in [Gemfile](./Gemfile) (which excludes known-broken
+releases) instead of whatever `pod` happens to be installed globally — keeping the repro
+reproducible across machines.
 
-## Bisecting to 3.2.5
+## How to reproduce
 
-The bisection is the most valuable part of this repro — it isolates the regression to
-[commit `4d46223`](https://github.com/jpudysz/react-native-unistyles/commit/4d4622379e10e82e7a744e5d3b66c2a0456826b8)
-("feat: add support for react-navigation inactive behaviour"), shipped in `3.3.0`.
+1. From `Home`, tap "Push" through `Step1 -> Step2 -> Step3` (this freezes `Home` and `Step1`).
+2. Wait a second or two for the freeze to take effect.
+3. Tap "Back" repeatedly to walk back one screen at a time (`Step3 -> Step2 -> Step1 -> Home`),
+   pausing briefly on each screen to check its text color/alignment against the expected
+   green + left-aligned state.
+4. Repeat the push/back cycle 5-10 times — per
+   [#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252), the corruption
+   compounds across cycles rather than showing up on the first one.
+
+If the bug is present, one or more screens will render white + centered instead of green +
+left-aligned.
+
+## Video demonstration
+
+| `3.3.0` (bug present)                       | `3.2.5` (no repro)                            |
+| -------------------------------------------- | ---------------------------------------------- |
+| ![Bug on 3.3.0](./media/bug-3.3.0.mp4)       | ![Fixed on 3.2.5](./media/fixed-3.2.5.mp4)     |
+
+See [media/README.md](./media/README.md) for the expected filenames if the videos aren't showing.
+
+To confirm the bisection, swap the unistyles version and rebuild:
 
 ```sh
-pnpm add react-native-unistyles@3.2.5
+npm install react-native-unistyles@3.2.5
 cd ios && bundle exec pod install && cd ..
-pnpm ios:dev
+npm run ios:dev
 ```
 
-Rebuild and let it cycle the same way: on `3.2.5` the `Home` text should stay green + left-aligned
-indefinitely, with no cross-contamination.
+On `3.2.5` the same cycles should never show cross-contamination — this isolates the regression
+to [commit `4d46223`](https://github.com/jpudysz/react-native-unistyles/commit/4d4622379e10e82e7a744e5d3b66c2a0456826b8)
+("feat: add support for react-navigation inactive behaviour"), shipped in `3.3.0`.
 
 ## Related upstream reports
 
@@ -79,7 +87,7 @@ indefinitely, with no cross-contamination.
   of a reproduction)
 - [#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
 
-Both #1234's and #1191's patches were tested against `3.3.0` and neither fixed this particular
-variant (style cross-contamination between unrelated components sharing a dynamic style function,
-rather than a crash) — see [UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md) for details.
+Patches from #1234 and #1191 were tested against `3.3.0` and neither fixed this variant (style
+cross-contamination, rather than a crash) — see [UNISTYLES_REPRO_SPEC.md](./UNISTYLES_REPRO_SPEC.md)
+for details.
 

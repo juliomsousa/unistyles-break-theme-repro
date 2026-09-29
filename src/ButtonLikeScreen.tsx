@@ -1,27 +1,26 @@
-import React from 'react';
-import {Button, StyleSheet, View} from 'react-native';
-import {StackActions} from '@react-navigation/native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {SharedText} from './SharedText';
-import type {HomeStackParamList} from './types';
+import {Button, View} from 'react-native'
+import {type NativeStackScreenProps} from '@react-navigation/native-stack'
+import {StyleSheet} from 'react-native-unistyles'
+import {SharedText} from './SharedText'
+import {type RootStackParamList} from './types'
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'Step3'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Step3'>
 
 export const ButtonLikeScreen = ({navigation}: Props) => (
   <View style={styles.container}>
-    <SharedText testID="button-like-text" color="white" alignCenter>
+    <SharedText alignCenter color="white" testID="button-like-text">
       Button
     </SharedText>
-    <Button title="Back to Home" onPress={() => navigation.dispatch(StackActions.popToTop())} />
+    <Button title="Back" onPress={() => navigation.goBack()} />
   </View>
-);
+)
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#111111',
-  },
-});
+    backgroundColor: theme.colors.dark
+  }
+}))

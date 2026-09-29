@@ -1,21 +1,23 @@
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles'
 
-const theme = {
+export const theme = {
   colors: {
     green: '#02594C',
     white: '#FFFFFF',
-  },
-};
+    dark: '#111111',
+    mutedText: '#666666'
+  }
+} as const
 
-type AppThemes = {
-  app: typeof theme;
-};
+export type AppTheme = typeof theme
 
 declare module 'react-native-unistyles' {
-  export interface UnistylesThemes extends AppThemes {}
+  export interface UnistylesThemes {
+    app: AppTheme
+  }
 }
 
 StyleSheet.configure({
   themes: {app: theme},
-  settings: {initialTheme: 'app'},
-});
+  settings: {initialTheme: 'app'}
+})
