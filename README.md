@@ -110,6 +110,12 @@ Flatten the style array fully in `ShadowRegistry.add`:
          .filter(Boolean)
 ```
 
+This branch (`patched-3.4.0`) applies the change to `react-native-unistyles@3.4.0` with
+[`patch-package`](https://github.com/ds300/patch-package): the patch lives in
+`patches/react-native-unistyles+3.4.0.patch` and is applied by the `postinstall` script on every
+`npm install`. With it, `Link.Bold` stays bold after the push/back cycle, and
+`npx jest __tests__/ShadowRegistryFlatten.test.ts` passes.
+
 ## Related upstream reports
 
 - [#1262](https://github.com/jpudysz/react-native-unistyles/issues/1262) - style leak between

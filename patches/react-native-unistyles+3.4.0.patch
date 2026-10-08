@@ -1,0 +1,52 @@
+diff --git a/node_modules/react-native-unistyles/lib/commonjs/specs/ShadowRegistry/index.js b/node_modules/react-native-unistyles/lib/commonjs/specs/ShadowRegistry/index.js
+index 5a91a77..e31eab7 100644
+--- a/node_modules/react-native-unistyles/lib/commonjs/specs/ShadowRegistry/index.js
++++ b/node_modules/react-native-unistyles/lib/commonjs/specs/ShadowRegistry/index.js
+@@ -35,10 +35,10 @@ HybridShadowRegistry.add = (handle, styles) => {
+   if (!handle || !styles) {
+     return;
+   }
+-  const stylesArray = Array.isArray(styles) ? styles.flat() : [styles];
++  const stylesArray = Array.isArray(styles) ? styles.flat(Infinity) : [styles];
+ 
+   // filter styles that are undefined or with no keys
+-  const filteredStyles = stylesArray.filter(style => style && Object.keys(style).length > 0).flat().filter(Boolean);
++  const filteredStyles = stylesArray.filter(style => style && Object.keys(style).length > 0).filter(Boolean);
+   if (filteredStyles.length > 0) {
+     const node = findShadowNodeForHandle(handle);
+     if (!node) {
+diff --git a/node_modules/react-native-unistyles/lib/module/specs/ShadowRegistry/index.js b/node_modules/react-native-unistyles/lib/module/specs/ShadowRegistry/index.js
+index df521a0..3de285e 100644
+--- a/node_modules/react-native-unistyles/lib/module/specs/ShadowRegistry/index.js
++++ b/node_modules/react-native-unistyles/lib/module/specs/ShadowRegistry/index.js
+@@ -31,10 +31,10 @@ HybridShadowRegistry.add = (handle, styles) => {
+   if (!handle || !styles) {
+     return;
+   }
+-  const stylesArray = Array.isArray(styles) ? styles.flat() : [styles];
++  const stylesArray = Array.isArray(styles) ? styles.flat(Infinity) : [styles];
+ 
+   // filter styles that are undefined or with no keys
+-  const filteredStyles = stylesArray.filter(style => style && Object.keys(style).length > 0).flat().filter(Boolean);
++  const filteredStyles = stylesArray.filter(style => style && Object.keys(style).length > 0).filter(Boolean);
+   if (filteredStyles.length > 0) {
+     const node = findShadowNodeForHandle(handle);
+     if (!node) {
+diff --git a/node_modules/react-native-unistyles/src/specs/ShadowRegistry/index.ts b/node_modules/react-native-unistyles/src/specs/ShadowRegistry/index.ts
+index f6a3167..8010939 100644
+--- a/node_modules/react-native-unistyles/src/specs/ShadowRegistry/index.ts
++++ b/node_modules/react-native-unistyles/src/specs/ShadowRegistry/index.ts
+@@ -71,12 +71,11 @@ HybridShadowRegistry.add = (handle, styles) => {
+         return
+     }
+ 
+-    const stylesArray = Array.isArray(styles) ? styles.flat() : [styles]
++    const stylesArray = Array.isArray(styles) ? styles.flat(Infinity) : [styles]
+ 
+     // filter styles that are undefined or with no keys
+     const filteredStyles = stylesArray
+         .filter((style) => style && Object.keys(style).length > 0)
+-        .flat()
+         .filter(Boolean)
+ 
+     if (filteredStyles.length > 0) {
