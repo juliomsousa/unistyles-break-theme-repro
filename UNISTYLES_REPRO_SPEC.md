@@ -203,6 +203,8 @@ unistyles-freeze-repro/
 ├── App.tsx                 # NavigationContainer + enableScreens/enableFreeze
 ├── src/
 │   ├── SharedText.tsx       # the ONE shared dynamic-function style (see below)
+│   ├── LinkText.tsx         # Link.Bold/Link.Regular (4/3 style levels) + BodyBold control (3 levels)
+│   ├── StyleSamples.tsx     # the three labelled samples rendered on every screen
 │   ├── HomeScreen.tsx       # renders SharedText with color=green (Push button only)
 │   ├── StepScreen.tsx       # generic Step1/Step2 screen, same green style + Push/Back buttons
 │   ├── ButtonLikeScreen.tsx # Step3 - renders SharedText with color=white, alignCenter=true + Back
@@ -293,8 +295,9 @@ repro; automation-grade assertions are a nice-to-have.
 
 Implemented as two branches plus two `npm` scripts:
 
-- `main` (3.3.0, broken) and `fixed-3.2.5` (identical except `react-native-unistyles` pinned to
-  `3.2.5`, and `package-lock.json` refreshed to match).
+- `main` (3.4.0) and `fixed-3.2.5` (identical except `react-native-unistyles` pinned to
+  `3.2.5`, and `package-lock.json` refreshed to match). The 3.3.0 colour leak needs
+  `npm install react-native-unistyles@3.3.0` on `main` (fixed upstream in 3.4.0, #1262).
 - `npm run demo:main` (`git checkout main && npm run build:ios`) and
   `npm run demo:fixed` (`git checkout fixed-3.2.5 && npm run build:ios`) so switching versions and
   rebuilding is a single command, no manual `pod install`/version juggling required.
@@ -303,6 +306,24 @@ This bisection is the single most valuable thing to hand the maintainer — conc
 and points straight at commit
 [`4d46223`](https://github.com/jpudysz/react-native-unistyles/commit/4d4622379e10e82e7a744e5d3b66c2a0456826b8)
 ("feat: add support for react-navigation inactive behaviour").
+
+## 7b. Second scenario: nested static styles dropped (3.4.0)
+
+3.4.0 fixed the colour leak (#1262) but a related bug remains on the same freeze/unfreeze
+re-link path. `ShadowRegistry.add` flattens the `style` prop only two levels (`.flat()` twice), so
+a static style nested 4 levels deep (`Link.Bold`) reaches `link()` as a leftover array and is never
+parsed. The style recomputed when a suspended node is re-linked then lacks it and overrides the
+bold weight React rendered.
+
+- `SharedText` takes a `fontWeight` argument (default `regular`) in the shared dynamic function.
+- `Link.Bold` adds the static `bold` style 4 levels deep and cannot override the weight.
+- Controls: `BodyBold` (3 levels, static) and the screen headings (weight as dynamic argument).
+- Manual check: same push/back cycle as section 5. Expected on 3.4.0: `Link.Bold` regular after
+  returning, controls bold. On 3.2.5 all samples keep their weight.
+- `__tests__/ShadowRegistryFlatten.test.ts` shows the flattening limit with no device (3 levels
+  pass, 4 fail). 3.2.5 has the same limit but never recomputes styles on re-link, so it is only
+  exposed from 3.3.0.
+- Suggested upstream fix: `styles.flat(Infinity)` in `ShadowRegistry.add`.
 
 ## 8. README contents
 
