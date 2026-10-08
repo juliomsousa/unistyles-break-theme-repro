@@ -85,13 +85,16 @@ See [media/README.md](./media/README.md) for the expected filenames if the video
 To confirm the bisection, run each branch's build:
 
 ```sh
-npm run demo:main   # checks out main (unistyles 3.4.0, bug present) and builds/runs iOS
-npm run demo:fixed  # checks out fixed-3.2.5 (unistyles 3.2.5, no repro) and builds/runs iOS
+npm run demo:main     # checks out main (unistyles 3.4.0, bug present) and builds/runs iOS
+npm run demo:fixed    # checks out fixed-3.2.5 (unistyles 3.2.5, no repro) and builds/runs iOS
+npm run demo:patched  # checks out patched-3.4.0 (unistyles 3.4.0 + flat(Infinity) patch, no repro)
 ```
 
-`fixed-3.2.5` is identical to `main` except `react-native-unistyles` is pinned to `3.2.5`. Both
-scripts run `git checkout` then `npm run build:ios`, so make sure you have no uncommitted changes
-before running them.
+`fixed-3.2.5` is identical to `main` except `react-native-unistyles` is pinned to `3.2.5`.
+`patched-3.4.0` is identical to `main` plus a `patch-package` patch (see "Suggested fix"). Each
+script runs `git checkout`, deletes `node_modules` (so a patch never carries over to another
+branch), then runs `npm run build:ios`. Make sure you have no uncommitted changes before running
+them.
 
 ## Suggested fix
 
