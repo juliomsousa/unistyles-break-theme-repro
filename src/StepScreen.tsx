@@ -3,6 +3,7 @@ import {StackActions} from '@react-navigation/native'
 import {type NativeStackScreenProps} from '@react-navigation/native-stack'
 import {StyleSheet} from 'react-native-unistyles'
 import {SharedText} from './SharedText'
+import {StyleSamples} from './StyleSamples'
 import {type RootStackParamList} from './types'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Step1' | 'Step2'> & {
@@ -20,9 +21,10 @@ export const StepScreen = ({
   testID
 }: Props) => (
   <View style={styles.container}>
-    <SharedText color="green" testID={testID}>
+    <SharedText color="green" fontWeight="bold" testID={testID}>
       {stepLabel}
     </SharedText>
+    <StyleSamples color="green" />
     <Button
       title={`Push ${nextRoute}`}
       onPress={() => navigation.dispatch(StackActions.push(nextRoute))}

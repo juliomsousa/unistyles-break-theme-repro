@@ -2,9 +2,12 @@ import {Text, type TextProps} from 'react-native'
 import {StyleSheet} from 'react-native-unistyles'
 import {type AppTheme} from './theme'
 
-interface SharedTextProps extends TextProps {
+type SharedFontWeight = 'regular' | 'bold'
+
+export interface SharedTextProps extends TextProps {
   color: keyof AppTheme['colors']
   alignCenter?: boolean
+  fontWeight?: SharedFontWeight
 }
 
 // one dynamic style function shared by every screen - the cross-contamination bug (if present)
@@ -12,23 +15,29 @@ interface SharedTextProps extends TextProps {
 export const SharedText = ({
   color,
   alignCenter = false,
+  fontWeight = 'regular',
   style,
   ...props
 }: SharedTextProps) => (
-  <Text {...props} style={[styles.styledText({color, alignCenter}), style]} />
+  <Text
+    {...props}
+    style={[styles.styledText({color, alignCenter, fontWeight}), style]}
+  />
 )
 
 const styles = StyleSheet.create(theme => ({
   styledText: ({
     color,
-    alignCenter
+    alignCenter,
+    fontWeight
   }: {
     color: keyof AppTheme['colors']
     alignCenter: boolean
+    fontWeight: SharedFontWeight
   }) => ({
     color: theme.colors[color],
     textAlign: alignCenter ? 'center' : undefined,
     fontSize: 32,
-    fontWeight: '700'
+    fontWeight: fontWeight === 'bold' ? '700' : '400'
   })
 }))
